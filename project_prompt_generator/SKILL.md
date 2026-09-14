@@ -429,5 +429,646 @@ If MCP is requested:
 
 ---
 
+## 12. Observability
+
+Observability should be part of the initial implementation, not a later add-on.
+
+Include:
+
+### Logging
+
+Structured logs with useful fields such as:
+
+* timestamp
+* level
+* request ID
+* trace ID
+* user/service identity where safe
+* operation
+* resource
+* duration
+* outcome
+* error category
+
+Never log secrets, credentials, raw authorization tokens, or sensitive payloads.
+
+For LLM applications, carefully consider whether prompts/responses contain sensitive data before logging them.
+
+### Metrics
+
+Define meaningful metrics such as:
+
+* request count
+* request latency
+* error rate
+* active jobs
+* queue depth
+* database latency
+* cache hit/miss
+* model calls
+* model latency
+* token usage
+* provider failures
+* prompt execution failures
+* tool execution failures
+
+Use Prometheus-compatible metrics where appropriate.
+
+### Tracing
+
+Use OpenTelemetry where useful.
+
+Trace:
+
+```text
+HTTP request
+  -> service operation
+      -> database
+      -> cache
+      -> external API
+      -> LLM provider
+      -> tool/MCP execution
+```
+
+Make trace propagation consistent.
+
+### Dashboards
+
+Provide useful Grafana dashboards rather than merely installing Grafana.
+
+---
+
+## 13. Health and Operational Endpoints
+
+Include appropriate endpoints such as:
+
+* liveness
+* readiness
+* health
+* metrics
+
+Distinguish liveness from readiness.
+
+A readiness check may verify required dependencies such as:
+
+* database
+* cache
+* message broker
+
+A liveness check should not fail merely because an external dependency is temporarily unavailable.
+
+---
+
+## 14. Docker / Local Development
+
+The project must be easy to run locally.
+
+Provide:
+
+* Dockerfile
+* Docker Compose
+* environment configuration
+* database initialization/migrations
+* cache
+* observability stack
+* optional development tooling
+* persistent volumes
+* health checks
+* service dependencies
+
+A typical local stack may include:
+
+```text
+Application
+PostgreSQL
+Redis/Valkey
+Prometheus
+Grafana
+OpenTelemetry Collector
+```
+
+Only include components actually justified by the project.
+
+Use health checks and sensible startup ordering.
+
+Do not rely on manually installing dependencies on the host unless unavoidable.
+
+---
+
+## 15. Configuration and Secrets
+
+Define configuration strategy.
+
+Use environment variables or a configuration layer rather than hard-coding:
+
+* database URLs
+* API keys
+* credentials
+* provider configuration
+* ports
+* feature flags
+* runtime settings
+
+Provide:
+
+```text
+.env.example
+```
+
+Never commit real credentials.
+
+Separate:
+
+* configuration
+* secrets
+* environment-specific values.
+
+---
+
+## 16. Database Migrations and Data Integrity
+
+Include:
+
+* migration tool
+* initial schema
+* indexes
+* constraints
+* seed/development data where useful
+* migration execution strategy
+* rollback considerations
+* transaction boundaries
+
+Do not use application startup to silently mutate production schemas unless that is an intentional design choice.
+
+---
+
+## 17. Caching
+
+If caching is appropriate, define:
+
+* what is cached
+* cache key strategy
+* TTL
+* invalidation
+* consistency expectations
+* failure behavior
+
+The application should generally remain correct when the cache is unavailable unless the cache is explicitly part of the required architecture.
+
+---
+
+## 18. Error Handling and Resilience
+
+Define a consistent error model.
+
+Cover:
+
+* validation errors
+* authentication/authorization errors
+* not found
+* conflict
+* dependency failure
+* timeout
+* rate limit
+* internal errors
+
+For external providers:
+
+* timeout
+* retry policy
+* exponential backoff
+* retryable vs non-retryable errors
+* circuit breaking where justified
+* fallback behavior where justified
+
+Never blindly retry non-idempotent operations.
+
+---
+
+## 19. Testing Strategy
+
+Testing should be layered.
+
+### Unit Tests
+
+Cover:
+
+* domain logic
+* services
+* validation
+* template rendering
+* versioning
+* authorization
+* provider abstraction
+
+### Integration Tests
+
+Cover:
+
+* database
+* cache
+* API
+* migrations
+* external provider adapters where practical
+
+### End-to-End Tests
+
+Cover critical user journeys.
+
+### Contract Tests
+
+Especially useful for:
+
+* provider adapters
+* MCP
+* tool schemas
+* public APIs
+
+### Test Infrastructure
+
+Prefer reproducible test environments using containers where appropriate.
+
+Define commands such as:
+
+```bash
+make test
+make test-unit
+make test-integration
+make lint
+make format
+```
+
+Adapt to the selected ecosystem.
+
+---
+
+## 20. CI/CD
+
+Provide a practical pipeline.
+
+At minimum consider:
+
+1. formatting
+2. linting/static analysis
+3. unit tests
+4. integration tests
+5. build
+6. security/dependency checks
+7. container build
+8. artifact publishing
+
+Do not introduce complex deployment automation unless requested.
+
+---
+
+## 21. Security
+
+Perform a threat-aware design review.
+
+Consider:
+
+* authentication
+* authorization
+* injection
+* SSRF
+* secret exposure
+* unsafe tool execution
+* arbitrary code execution
+* malicious prompt content
+* prompt injection
+* untrusted model output
+* dependency vulnerabilities
+* container permissions
+* network exposure
+* rate limiting
+* audit trails
+
+For AI systems, treat model output as **untrusted input**.
+
+Do not allow model output to directly execute privileged operations without validation and authorization.
+
+---
+
+## 22. Performance and Scalability
+
+Define likely bottlenecks.
+
+Consider:
+
+* database indexes
+* connection pooling
+* caching
+* async work
+* streaming
+* batching
+* concurrency limits
+* provider rate limits
+* pagination
+* payload size
+* connection timeouts
+
+Do not prematurely introduce distributed systems.
+
+Start with a simple architecture that can scale along clearly identified boundaries.
+
+---
+
+## 23. Developer Experience
+
+Make the project pleasant to work on.
+
+Provide:
+
+* one-command local startup
+* clear README
+* Makefile/task runner
+* `.env.example`
+* seeded development data
+* API documentation
+* example requests
+* example configuration
+* useful logs
+* health checks
+* deterministic tests
+
+A new developer should be able to clone the repository and understand how to run and test it without asking the original author.
+
+---
+
+## 24. Documentation
+
+Generate/update:
+
+```text
+README.md
+docs/
+├── architecture.md
+├── api.md
+├── development.md
+├── deployment.md
+├── configuration.md
+├── security.md
+└── decisions/
+```
+
+Use architecture decision records for important choices when appropriate.
+
+Documentation should explain **why**, not only what.
+
+---
+
+## 25. Seed / Demo Data
+
+If useful, create realistic development data.
+
+For example:
+
+* demo users
+* roles
+* example projects
+* sample templates
+* multiple versions
+* sample tools
+* sample skills
+* provider configurations using mock providers
+
+Never require real external API credentials just to start the project locally.
+
+---
+
+## 26. Mock / Local Provider Strategy
+
+For AI integrations, make local development possible without paid external APIs.
+
+Provide a mock provider or deterministic fake implementation.
+
+This allows:
+
+* tests
+* local API exploration
+* UI development
+* CI
+* offline development
+
+The production provider interface should remain the same.
+
+---
+
+## 27. API / CLI Examples
+
+Include concrete examples for the most important workflows.
+
+Examples might include:
+
+```bash
+# create
+# publish
+# execute
+# list versions
+# rollback
+# inspect execution
+# manage skills
+# manage tools
+```
+
+Use the actual project's API rather than generic placeholders whenever the project requirements are known.
+
+---
+
+## 28. Implementation Phases
+
+Break implementation into logical phases.
+
+Example:
+
+### Phase 1 — Foundation
+
+* repository
+* configuration
+* database
+* migrations
+* Docker Compose
+* health endpoint
+
+### Phase 2 — Core Domain
+
+* entities
+* services
+* repositories
+* API
+
+### Phase 3 — Runtime
+
+* execution engine
+* provider abstraction
+* caching
+* background jobs
+
+### Phase 4 — Integrations
+
+* external providers
+* MCP
+* tools
+* skills
+
+### Phase 5 — Observability
+
+* metrics
+* tracing
+* Grafana
+* dashboards
+
+### Phase 6 — Hardening
+
+* security
+* resilience
+* performance
+* integration tests
+* documentation
+
+Adjust phases to the actual project.
+
+---
+
+## 29. Definition of Done
+
+Define concrete completion criteria.
+
+The project should not be considered complete merely because the code compiles.
+
+Include criteria such as:
+
+* local startup works from a clean environment
+* migrations run successfully
+* health/readiness endpoints work
+* core API workflows work
+* authorization is enforced
+* versioning/rollback works
+* tests pass
+* observability works
+* dashboards load
+* documentation is accurate
+* sample workflow works end-to-end
+* no secrets are committed
+* failure scenarios are handled
+
+---
+
+# Engineering Principles
+
+Apply these principles unless the project explicitly requires otherwise:
+
+1. **Prefer boring, reliable architecture over unnecessary complexity.**
+2. **Keep business logic independent of infrastructure where practical.**
+3. **Use interfaces at integration boundaries, not everywhere.**
+4. **Avoid premature microservices.**
+5. **Make important state transitions explicit.**
+6. **Treat externally supplied data as untrusted.**
+7. **Make runtime configuration changes safe and auditable.**
+8. **Prefer immutable history for versioned artifacts.**
+9. **Make failures observable and diagnosable.**
+10. **Keep local development close to production architecture where practical.**
+11. **Do not add technology merely because it is popular.**
+12. **Use current official documentation when APIs or specifications may have changed.**
+13. **Prefer reproducibility over developer-specific machine setup.**
+14. **Do not hide architectural assumptions.**
+15. **Keep the first implementation extensible, but do not build speculative infrastructure.**
+
+---
+
+# Clarification Rules
+
+Ask questions before generating the final implementation prompt only when the answer can materially change the design.
+
+Good questions include:
+
+* Who are the users?
+* Is this single-user, team-based, or multi-tenant?
+* What deployment environment is expected?
+* Which authentication provider is required?
+* Which external systems must be integrated?
+* Is the API public or internal?
+* What data must be retained?
+* Are there compliance/security constraints?
+* What scale is expected?
+* Is high availability required?
+* Which languages/frameworks are mandated?
+* Which model providers must be supported?
+* Does the system need streaming?
+* Should external APIs be mocked locally?
+* What is the expected deployment target?
+
+Avoid asking questions that can be handled with a reasonable assumption.
+
+If clarification is needed, ask a **small, prioritized set** rather than a huge questionnaire.
+
+---
+
+# Output Behavior
+
+When the user provides a project idea, produce one of two outcomes:
+
+### If requirements are sufficiently clear
+
+Return:
+
+> **Implementation Prompt**
+
+followed by a complete project-specific prompt using the structure above.
+
+The prompt should be written as instructions to the developer/coding agent.
+
+### If critical requirements are missing
+
+Return:
+
+> **A few decisions before implementation**
+
+Ask only the minimum questions necessary.
+
+Then, after the answers, generate the complete implementation prompt.
+
+---
+
+# Important Distinction
+
+Do not turn every project into the same stack.
+
+The template defines the **engineering depth**, not a fixed technology stack.
+
+For example:
+
+* A Go backend may use PostgreSQL + Redis/Valkey + OpenTelemetry.
+* A Python service may use FastAPI + PostgreSQL + Celery/Arq depending on requirements.
+* A C++ application may require CMake, Conan/vcpkg, Qt, sanitizers, and platform packaging.
+* A frontend-heavy application may use TypeScript, a web framework, browser storage, PWA infrastructure, and an appropriate backend.
+* A CLI may not need PostgreSQL, Grafana, or Redis at all.
+
+Choose architecture and infrastructure based on the actual project.
+
+---
+
+# Quality Bar
+
+The generated prompt should feel like a **senior engineer's technical kickoff document converted into an actionable coding-agent prompt**.
+
+It should answer:
+
+* What are we building?
+* Why?
+* Who uses it?
+* What are the boundaries?
+* How is it structured?
+* What data exists?
+* How does the API work?
+* How is state changed safely?
+* Who is allowed to change what?
+* How do integrations work?
+* How do we test it?
+* How do we run it locally?
+* How do we observe it?
+* How does it fail?
+* How do we extend it?
+* How do we know it is actually finished?
 
 The final result should be specific to the supplied project idea, not a generic restatement of this template.
